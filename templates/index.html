@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>pokemons</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <h1 style="text-align: center"> Pokemon Team Builder</h1>
+    <form action="/" method="POST">
+        <input type="text" name="name" id="name">
+        <input type="submit" value="Add pokemon">
+    </form>
+    <form action="/randomize_team" method="GET">
+        <input type="submit" value="Randomize team">
+    </form>
+    <form action="/delete_team" method="POST">
+        <input type="submit" value="Delete all pokemon">
+    </form>
+    {% if Pokemons|length < 1 %}
+    <h1 style="text-align: center"> There are no pokemons. Add one below </h1>
+    {% else %}
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Action</th>
+            <th>Sprite</th>
+        </tr>
+        {% for pokemon in Pokemons%}
+            <tr>
+                <td>{{ pokemon.name }}</td>
+                <td>{{ pokemon.ptype }}</td>
+                <td>
+                    <a href="/delete/{{pokemon.id}}">Delete</a>
+                    <br>
+                    <a href="/update/{{pokemon.id}}">Update</a>
+                </td>
+                <td> 
+                    <img src="{{ pokemon.sprite }}" alt="User Image">
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</div>
+{% endblock %}
