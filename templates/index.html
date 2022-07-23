@@ -43,5 +43,10 @@
         {% endfor %}
     </table>
     {% endif %}
+    {% if typesStrongAgainstTeam %}
+    <h1>typesStrongAgainstTeam: {{ typesStrongAgainstTeam }}!</h1>
+    {% else %}
+    <h1>Your team has no weaknesses!</h1>
+    {% endif %}
 </div>
 {% endblock %}

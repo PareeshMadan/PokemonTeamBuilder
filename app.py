@@ -1,12 +1,76 @@
 from flask import Flask, render_template, url_for, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from enum import Enum
 import random
 import requests
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 db = SQLAlchemy(app)
+
+class Type(Enum):
+    NORMAL = "normal"
+    FIRE = "fire"
+    WATER = "water"
+    GRASS = "grass"
+    ELECTRIC = "electric"
+    ICE = "ice"
+    FIGHTING = "fighting"
+    POISON = "poison"
+    GROUND = "ground"
+    FLYING = "flying"
+    PSYCHIC = "psychic"
+    BUG = "bug"
+    ROCK = "rock"
+    GHOST = "ghost"
+    DARK = "dark"
+    DRAGON = "dragon"
+    STEEL = "steel"
+    FAIRY = "fairy"
+
+
+weaknessMap = { 
+    Type.BUG: [Type.FIRE, Type.FLYING, Type.ROCK],
+    Type.DARK: [Type.BUG, Type.FAIRY, Type.FIGHTING],
+    Type.DRAGON: [Type.STEEL, Type.FAIRY],
+    Type.ELECTRIC: [Type.GROUND],
+    Type.FIGHTING: [Type.FAIRY, Type.FLYING, Type.PSYCHIC],
+    Type.FAIRY: [Type.POISON, Type.STEEL],
+    Type.FIRE: [Type.GROUND, Type.ROCK, Type.WATER],
+    Type.FLYING: [Type.ELECTRIC, Type.ICE, Type.ROCK],
+    Type.GHOST: [Type.DARK, Type.GHOST],
+    Type.GRASS: [Type.BUG, Type.FIRE, Type.FLYING, Type.ICE, Type.POISON],
+    Type.GROUND: [Type.GRASS, Type.ICE, Type.WATER],
+    Type.ICE: [Type.FIGHTING, Type.FIRE, Type.ROCK, Type.STEEL],
+    Type.NORMAL: [Type.FIGHTING],
+    Type.POISON: [Type.GROUND, Type.PSYCHIC],
+    Type.PSYCHIC: [Type.BUG, Type.DARK, Type.GHOST],
+    Type.ROCK: [Type.FIGHTING, Type.GRASS, Type.GROUND, Type.STEEL, Type.WATER],
+    Type.STEEL: [Type.FIGHTING, Type.FIRE, Type.GROUND],
+    Type.WATER: [Type.ELECTRIC, Type.GRASS]
+}
+
+resistanceMap = { 
+    Type.BUG: [Type.FIGHTING, Type.GROUND, Type.GRASS],
+    Type.DARK: [Type.GHOST, Type.PSYCHIC, Type.DARK],
+    Type.DRAGON: [Type.FIRE, Type.WATER, Type.GRASS, Type.ELECTRIC],
+    Type.ELECTRIC: [Type.FLYING, Type.STEEL, Type.ELECTRIC],
+    Type.FIGHTING: [Type.ROCK, Type.BUG, Type.DARK],
+    Type.FAIRY: [Type.FIGHTING, Type.BUG, Type.DRAGON, Type.DARK],
+    Type.FIRE: [Type.BUG, Type.STEEL, Type.FIRE, Type.GRASS, Type.ICE],
+    Type.FLYING: [Type.FIGHTING, Type.GROUND, Type.BUG, Type.GRASS],
+    Type.GHOST: [Type.NORMAL, Type.FIGHTING, Type.POISON, Type.BUG],
+    Type.GRASS: [Type.GROUND, Type.WATER, Type.GRASS, Type.ELECTRIC],
+    Type.GROUND: [Type.POISON, Type.ROCK, Type.ELECTRIC],
+    Type.ICE: [Type.ICE],
+    Type.NORMAL: [Type.GHOST],
+    Type.POISON: [Type.FIGHTING, Type.POISON, Type.GRASS, Type.FAIRY],
+    Type.PSYCHIC: [Type.FIGHTING, Type.PSYCHIC],
+    Type.ROCK: [Type.NORMAL, Type.FLYING, Type.POISON, Type.FIRE],
+    Type.STEEL: [Type.NORMAL, Type.FLYING, Type.POISON, Type.ROCK, Type.BUG, Type.STEEL, Type.GRASS, Type.PSYCHIC, Type.ICE, Type.DRAGON, Type.FAIRY],
+    Type.WATER: [Type.STEEL, Type.FIRE, Type.WATER, Type.ICE]
+}
 
 class Pokemon(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,7 +108,54 @@ def index():
 
     else:
         Pokemons = Pokemon.query.order_by(Pokemon.name).all()
-        return render_template("index.html", Pokemons=Pokemons)
+        weaknessCount = {
+            Type.NORMAL: 0,
+            Type.FIRE:0,
+            Type.WATER:0,
+            Type.GRASS:0,
+            Type.ELECTRIC:0,
+            Type.ICE:0,
+            Type.FIGHTING:0,
+            Type.POISON:0,
+            Type.GROUND:0,
+            Type.FLYING:0,
+            Type.PSYCHIC:0,
+            Type.BUG:0,
+            Type.ROCK:0,
+            Type.GHOST:0,
+            Type.DARK:0,
+            Type.DRAGON:0,
+            Type.STEEL:0,
+            Type.FAIRY:0
+        }
+
+        for pman in Pokemons:
+            weaknesses = []
+
+            if ", " in pman.ptype:
+                primaryType = pman.ptype[0:pman.ptype.index(", ")]
+                secondaryType = pman.ptype[pman.ptype.index(", ") + 2:]
+                firstWeaknesses = weaknessMap[Type(primaryType)]
+                firstResistances = resistanceMap[Type(primaryType)]
+                secondWeaknesses = weaknessMap[Type(secondaryType)]
+                secondResistances = resistanceMap[Type(secondaryType)]
+
+                totalWeaknesses = set(firstWeaknesses + secondWeaknesses)
+                totalResistances = set(firstResistances + secondResistances)
+                weaknesses = list(totalWeaknesses - totalResistances)
+            else:
+                weaknesses = weaknessMap[Type(pman.ptype)]
+
+            for weakness in weaknesses:
+                weaknessCount[weakness] = weaknessCount[weakness] + 1
+        
+        typesStrongAgainstTeam = []
+
+        for weakness in weaknessCount:
+            if weaknessCount[weakness] >= 3:
+                typesStrongAgainstTeam.append(weakness.name)
+
+        return render_template("index.html", Pokemons=Pokemons, typesStrongAgainstTeam=typesStrongAgainstTeam)
 
 @app.route('/delete/<int:id>')
 def delete(id):
