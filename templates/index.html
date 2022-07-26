@@ -7,10 +7,17 @@
 {% block body %}
 <div class="content">
     <h1 style="text-align: center"> Pokemon Team Builder</h1>
+    {% if Pokemons|length >= 6 %}
+    <form action="/" method="POST">
+        <input type="text" name="name" id="name">
+        <input type="submit" value="Add pokemon" disabled="disabled">
+    </form>
+    {% else %}
     <form action="/" method="POST">
         <input type="text" name="name" id="name">
         <input type="submit" value="Add pokemon">
     </form>
+    {% endif %}
     <form action="/randomize_team" method="GET">
         <input type="submit" value="Randomize team">
     </form>
