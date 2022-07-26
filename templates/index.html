@@ -40,8 +40,6 @@
                 <td>{{ pokemon.ptype }}</td>
                 <td>
                     <a href="/delete/{{pokemon.id}}">Delete</a>
-                    <br>
-                    <a href="/update/{{pokemon.id}}">Update</a>
                 </td>
                 <td> 
                     <img src="{{ pokemon.sprite }}" alt="User Image">
@@ -55,7 +53,10 @@
     {% for type in typesStrongAgainstTeam %}
     <a>
         {{ type }}
+        <br></br>
+        <a>Recommended Pokemon: 
         {{ suggestedPokemonMap[type] }}
+        </a>
         <br></br>
     </a>
     {% endfor %}
