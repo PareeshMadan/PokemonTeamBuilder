@@ -72,6 +72,26 @@ resistanceMap = {
     Type.WATER: [Type.STEEL, Type.FIRE, Type.WATER, Type.ICE]
 }
 
+pokemonSuggestions = {
+    Type.BUG: ["charizard", "aerodactyl", "togekiss"],
+    Type.DARK: ["scizor", "azumarill", "lucario"],
+    Type.DRAGON: ["aggron", "sylveon", "clefable"],
+    Type.ELECTRIC: ["hippowdown", "flygon", "garchomp"],
+    Type.FIGHTING: ["sylveon", "staraptor", "espeon"],
+    Type.FAIRY: ["venusaur", "metagross", "scizor"],
+    Type.FIRE: ["garchomp", "tyranitar", "blastoise"],
+    Type.FLYING: ["ampharos", "aerodactyl", "aggron"],
+    Type.GHOST: ["absol", "bisharp", "tyranitar"],
+    Type.GRASS: ["scizor", "charizard", "staraptor", "toxicroak"],
+    Type.GROUND: ["sceptile", "blastoise", "shaymin"],
+    Type.ICE: ["blaziken", "lucario", "greninja"],
+    Type.NORMAL: ["aggron", "lucario", "skarmory"],
+    Type.POISON: ["hippowdown", "aggron", "gengar"],
+    Type.PSYCHIC: ["heatran", "empoleon", "jirachi"],
+    Type.ROCK: ["lucario", "venusaur", "rhyperior"],
+    Type.STEEL: ["lucario", "ampharos", "infernape"],
+    Type.WATER: ["ampharos", "venusaur", "blastoise"]
+}
 class Pokemon(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(500), default="")
@@ -155,7 +175,12 @@ def index():
             if weaknessCount[weakness] >= 3:
                 typesStrongAgainstTeam.append(weakness.name)
 
-        return render_template("index.html", Pokemons=Pokemons, typesStrongAgainstTeam=typesStrongAgainstTeam)
+        suggestedPokemonMap = {}
+
+        for typeStrongAgainstTeam in typesStrongAgainstTeam:
+            suggestedPokemonMap[typeStrongAgainstTeam] = pokemonSuggestions[Type(typeStrongAgainstTeam.lower())]
+
+        return render_template("index.html", Pokemons=Pokemons, typesStrongAgainstTeam=typesStrongAgainstTeam, suggestedPokemonMap=suggestedPokemonMap)
 
 @app.route('/delete/<int:id>')
 def delete(id):
@@ -232,4 +257,4 @@ def delete_pokemon():
         return render_template("index.html", Pokemons=Pokemons)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0",debug=True)

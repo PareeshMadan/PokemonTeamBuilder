@@ -44,7 +44,14 @@
     </table>
     {% endif %}
     {% if typesStrongAgainstTeam %}
-    <h1>typesStrongAgainstTeam: {{ typesStrongAgainstTeam }}!</h1>
+    <h1>Types Strong against your team:</h1>
+    {% for type in typesStrongAgainstTeam %}
+    <a>
+        {{ type }}
+        {{ suggestedPokemonMap[type] }}
+        <br></br>
+    </a>
+    {% endfor %}
     {% else %}
     <h1>Your team has no weaknesses!</h1>
     {% endif %}
