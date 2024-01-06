@@ -6,8 +6,11 @@ import random
 import requests
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project.db'
 db = SQLAlchemy(app)
+
+with app.app_context():
+    db.create_all()
 
 class Type(Enum):
     NORMAL = "normal"
@@ -100,6 +103,9 @@ class Pokemon(db.Model):
 
     def __repr__(self):
         return '<Pokemon %r>' % self.id
+
+with app.app_context():
+    db.create_all()
 
 def create_pokemon_from_name_or_num(pokemon_name_or_num):
     response = requests.get('https://pokeapi.co/api/v2/pokemon/' + pokemon_name_or_num)
@@ -257,4 +263,4 @@ def delete_pokemon():
         return render_template("index.html", Pokemons=Pokemons)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",debug=True)
+    app.run(host="0.0.0.0", port=8080,debug=True)
