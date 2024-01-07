@@ -11,4 +11,4 @@ live at https://pkmnteambuilder.web.app/
 - click delete to delete that pokemon
 - click delete all to delete all pokemon
 
-![alt text](https://github.com/PareeshMadan/PokemonTeamBuilder/images/pkmn.png)
+![alt text](https://github.com/PareeshMadan/PokemonTeamBuilder/blob/main/images/pkmn.png)
