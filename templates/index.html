@@ -1,67 +1,79 @@
 {% extends 'base.html' %}
 
 {% block head %}
-<title>pokemons</title>
+<title>Pokemon Team Builder</title>
 {% endblock %}
 
 {% block body %}
 <div class="content">
-    <h1 style="text-align: center"> Pokemon Team Builder</h1>
-    {% if Pokemons|length >= 6 %}
-    <form action="/" method="POST">
-        <input type="text" name="name" id="name">
-        <input type="submit" value="Add pokemon" disabled="disabled">
-    </form>
-    {% else %}
-    <form action="/" method="POST">
-        <input type="text" name="name" id="name">
-        <input type="submit" value="Add pokemon">
-    </form>
+    <header class="pokedex-header">
+        <span class="pokeball"></span>
+        <h1>Pokemon Team Builder</h1>
+    </header>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
     {% endif %}
-    <form action="/randomize_team" method="GET">
-        <input type="submit" value="Randomize team">
-    </form>
-    <form action="/delete_team" method="POST">
-        <input type="submit" value="Delete all pokemon">
-    </form>
+
+    <div class="control-panel">
+        <form action="/" method="POST" class="search-form">
+            <input type="text" name="name" id="name" placeholder="Enter a Pokemon name..." autocomplete="off">
+            <button type="submit" {% if Pokemons|length >= 6 %}disabled{% endif %}>Add Pokemon</button>
+        </form>
+        {% if Pokemons|length >= 6 %}
+        <p class="team-full-note">Your team is full (6/6). Remove a Pokemon to add another.</p>
+        {% endif %}
+        <div class="team-actions">
+            <form action="/randomize_team" method="GET">
+                <button type="submit" class="btn-secondary">🎲 Randomize team</button>
+            </form>
+            <form action="/delete_team" method="POST">
+                <button type="submit" class="btn-danger">🗑 Delete all</button>
+            </form>
+        </div>
+    </div>
+
     {% if Pokemons|length < 1 %}
-    <h1 style="text-align: center"> There are no pokemons. Add one below </h1>
+    <div class="empty-state">
+        <p>No Pokemon on your team yet.</p>
+        <p>Add one above to get started!</p>
+    </div>
     {% else %}
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Action</th>
-            <th>Sprite</th>
-        </tr>
-        {% for pokemon in Pokemons%}
-            <tr>
-                <td>{{ pokemon.name }}</td>
-                <td>{{ pokemon.ptype }}</td>
-                <td>
-                    <a href="/delete/{{pokemon.id}}">Delete</a>
-                </td>
-                <td> 
-                    <img src="{{ pokemon.sprite }}" alt="User Image">
-                </td>
-            </tr>
+    <div class="team-grid">
+        {% for pokemon in Pokemons %}
+        <div class="pokemon-card">
+            <a href="/delete/{{ pokemon.id }}" class="card-delete" title="Delete">&times;</a>
+            <div class="sprite-wrap">
+                <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}">
+            </div>
+            <h3 class="pokemon-name">{{ pokemon.name }}</h3>
+            <div class="type-badges">
+                {% for t in pokemon.ptype.split(', ') %}
+                <span class="type-badge type-{{ t }}">{{ t }}</span>
+                {% endfor %}
+            </div>
+        </div>
         {% endfor %}
-    </table>
+    </div>
     {% endif %}
-    {% if typesStrongAgainstTeam %}
-    <h1>Types Strong against your team:</h1>
-    {% for type in typesStrongAgainstTeam %}
-    <a>
-        {{ type }}
-        <br></br>
-        <a>Recommended Pokemon: 
-        {{ suggestedPokemonMap[type] }}
-        </a>
-        <br></br>
-    </a>
-    {% endfor %}
-    {% else %}
-    <h1>Your team has no weaknesses!</h1>
-    {% endif %}
+
+    <div class="analysis-panel">
+        {% if typesStrongAgainstTeam %}
+        <h2>⚠ Types strong against your team</h2>
+        {% for type in typesStrongAgainstTeam %}
+        <div class="weakness-row">
+            <span class="type-badge type-{{ type|lower }}">{{ type|lower }}</span>
+            <div class="suggestions">
+                <span class="suggest-label">Try:</span>
+                {% for suggestion in suggestedPokemonMap[type] %}
+                <span class="suggest-chip">{{ suggestion }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <h2 class="no-weakness">✓ Your team has no major weaknesses!</h2>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

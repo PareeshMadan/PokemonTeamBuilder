@@ -1,13 +1,22 @@
-from flask import Flask, render_template, url_for, request, redirect
+from flask import Flask, render_template, url_for, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from enum import Enum
 import random
 import requests
+import uuid
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project.db'
+app.secret_key = 'pokemon-team-builder-secret-key'
 db = SQLAlchemy(app)
+
+
+def get_uid():
+    """Return the current browser's unique id, assigning one if needed."""
+    if 'uid' not in session:
+        session['uid'] = uuid.uuid4().hex
+    return session['uid']
 
 with app.app_context():
     db.create_all()
@@ -100,6 +109,7 @@ class Pokemon(db.Model):
     name = db.Column(db.String(500), default="")
     ptype = db.Column(db.String(500), default="")
     sprite = db.Column(db.String, default="")
+    owner = db.Column(db.String, default="")
 
     def __repr__(self):
         return '<Pokemon %r>' % self.id
@@ -108,23 +118,90 @@ with app.app_context():
     db.create_all()
 
 def create_pokemon_from_name_or_num(pokemon_name_or_num):
-    response = requests.get('https://pokeapi.co/api/v2/pokemon/' + pokemon_name_or_num)
-    sprite_url = response.json()['sprites']['front_default']
-    ptype = response.json()['types'][0]['type']['name']
-    
-    if len(response.json()['types']) > 1:
-        ptype = ptype + ", " + response.json()['types'][1]['type']['name']
+    """Fetch a Pokemon from PokeAPI. Returns None if the name/id isn't found."""
+    lookup = pokemon_name_or_num.strip().lower()
+    response = requests.get('https://pokeapi.co/api/v2/pokemon/' + lookup)
 
-    pokemon_name = response.json()['forms'][0]['name']
+    if not response.ok:
+        return None
 
-    return Pokemon(name=pokemon_name, ptype=ptype, sprite=sprite_url)
+    data = response.json()
+    sprite_url = data['sprites']['front_default']
+    ptype = data['types'][0]['type']['name']
+
+    if len(data['types']) > 1:
+        ptype = ptype + ", " + data['types'][1]['type']['name']
+
+    pokemon_name = data['forms'][0]['name']
+
+    return Pokemon(name=pokemon_name, ptype=ptype, sprite=sprite_url, owner=get_uid())
+
+def render_index(error=None):
+    """Render the home page with the current user's team and weakness analysis."""
+    Pokemons = Pokemon.query.filter_by(owner=get_uid()).order_by(Pokemon.name).all()
+    weaknessCount = {
+        Type.NORMAL: 0,
+        Type.FIRE:0,
+        Type.WATER:0,
+        Type.GRASS:0,
+        Type.ELECTRIC:0,
+        Type.ICE:0,
+        Type.FIGHTING:0,
+        Type.POISON:0,
+        Type.GROUND:0,
+        Type.FLYING:0,
+        Type.PSYCHIC:0,
+        Type.BUG:0,
+        Type.ROCK:0,
+        Type.GHOST:0,
+        Type.DARK:0,
+        Type.DRAGON:0,
+        Type.STEEL:0,
+        Type.FAIRY:0
+    }
+
+    for pman in Pokemons:
+        weaknesses = []
+
+        if ", " in pman.ptype:
+            primaryType = pman.ptype[0:pman.ptype.index(", ")]
+            secondaryType = pman.ptype[pman.ptype.index(", ") + 2:]
+            firstWeaknesses = weaknessMap[Type(primaryType)]
+            firstResistances = resistanceMap[Type(primaryType)]
+            secondWeaknesses = weaknessMap[Type(secondaryType)]
+            secondResistances = resistanceMap[Type(secondaryType)]
+
+            totalWeaknesses = set(firstWeaknesses + secondWeaknesses)
+            totalResistances = set(firstResistances + secondResistances)
+            weaknesses = list(totalWeaknesses - totalResistances)
+        else:
+            weaknesses = weaknessMap[Type(pman.ptype)]
+
+        for weakness in weaknesses:
+            weaknessCount[weakness] = weaknessCount[weakness] + 1
+
+    typesStrongAgainstTeam = []
+
+    for weakness in weaknessCount:
+        if weaknessCount[weakness] >= 3:
+            typesStrongAgainstTeam.append(weakness.name)
+
+    suggestedPokemonMap = {}
+
+    for typeStrongAgainstTeam in typesStrongAgainstTeam:
+        suggestedPokemonMap[typeStrongAgainstTeam] = pokemonSuggestions[Type(typeStrongAgainstTeam.lower())]
+
+    return render_template("index.html", Pokemons=Pokemons, typesStrongAgainstTeam=typesStrongAgainstTeam, suggestedPokemonMap=suggestedPokemonMap, error=error)
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
     if request.method == "POST":
         pokemon_name = request.form['name']
-        new_Pokemon = create_pokemon_from_name_or_num(request.form['name'])
-    
+        new_Pokemon = create_pokemon_from_name_or_num(pokemon_name)
+
+        if new_Pokemon is None:
+            return render_index(error='Pokemon "%s" not found — check the spelling.' % pokemon_name)
+
         try:
             db.session.add(new_Pokemon)
             db.session.commit()
@@ -133,64 +210,14 @@ def index():
             return 'There was an issue adding your Pokemon'
 
     else:
-        Pokemons = Pokemon.query.order_by(Pokemon.name).all()
-        weaknessCount = {
-            Type.NORMAL: 0,
-            Type.FIRE:0,
-            Type.WATER:0,
-            Type.GRASS:0,
-            Type.ELECTRIC:0,
-            Type.ICE:0,
-            Type.FIGHTING:0,
-            Type.POISON:0,
-            Type.GROUND:0,
-            Type.FLYING:0,
-            Type.PSYCHIC:0,
-            Type.BUG:0,
-            Type.ROCK:0,
-            Type.GHOST:0,
-            Type.DARK:0,
-            Type.DRAGON:0,
-            Type.STEEL:0,
-            Type.FAIRY:0
-        }
-
-        for pman in Pokemons:
-            weaknesses = []
-
-            if ", " in pman.ptype:
-                primaryType = pman.ptype[0:pman.ptype.index(", ")]
-                secondaryType = pman.ptype[pman.ptype.index(", ") + 2:]
-                firstWeaknesses = weaknessMap[Type(primaryType)]
-                firstResistances = resistanceMap[Type(primaryType)]
-                secondWeaknesses = weaknessMap[Type(secondaryType)]
-                secondResistances = resistanceMap[Type(secondaryType)]
-
-                totalWeaknesses = set(firstWeaknesses + secondWeaknesses)
-                totalResistances = set(firstResistances + secondResistances)
-                weaknesses = list(totalWeaknesses - totalResistances)
-            else:
-                weaknesses = weaknessMap[Type(pman.ptype)]
-
-            for weakness in weaknesses:
-                weaknessCount[weakness] = weaknessCount[weakness] + 1
-        
-        typesStrongAgainstTeam = []
-
-        for weakness in weaknessCount:
-            if weaknessCount[weakness] >= 3:
-                typesStrongAgainstTeam.append(weakness.name)
-
-        suggestedPokemonMap = {}
-
-        for typeStrongAgainstTeam in typesStrongAgainstTeam:
-            suggestedPokemonMap[typeStrongAgainstTeam] = pokemonSuggestions[Type(typeStrongAgainstTeam.lower())]
-
-        return render_template("index.html", Pokemons=Pokemons, typesStrongAgainstTeam=typesStrongAgainstTeam, suggestedPokemonMap=suggestedPokemonMap)
+        return render_index()
 
 @app.route('/delete/<int:id>')
 def delete(id):
     Pokemon_to_delete = Pokemon.query.get_or_404(id)
+
+    if Pokemon_to_delete.owner != get_uid():
+        return redirect('/')
 
     try:
         db.session.delete(Pokemon_to_delete)
@@ -202,6 +229,10 @@ def delete(id):
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 def update(id):
     Pokemon = Pokemon.query.get_or_404(id)
+
+    if Pokemon.owner != get_uid():
+        return redirect('/')
+
     if request.method == "POST":
         Pokemon.content = request.form['name']
         try:
@@ -213,7 +244,7 @@ def update(id):
         return render_template('update.html', Pokemon=Pokemon)
 
 def delete_all_pokemon():
-    Pokemons = Pokemon.query.order_by(Pokemon.name).all()
+    Pokemons = Pokemon.query.filter_by(owner=get_uid()).order_by(Pokemon.name).all()
 
     try:
         for pokemon_to_delete in Pokemons:
@@ -236,6 +267,8 @@ def randomize_team():
         random_pokemon_ids = [random.randint(1, 898) for _ in range(6)]
         for random_pokemon_id in random_pokemon_ids:
             new_Pokemon = create_pokemon_from_name_or_num(str(random_pokemon_id))
+            if new_Pokemon is None:
+                continue
             try:
                 db.session.add(new_Pokemon)
                 db.session.commit()
@@ -244,8 +277,7 @@ def randomize_team():
         return redirect('/')
 
     else:
-        Pokemons = Pokemon.query.order_by(Pokemon.name).all()
-        return render_template("index.html", Pokemons=Pokemons)
+        return render_index()
 
 @app.route('/delete_team', methods=['POST'])
 def delete_pokemon():
@@ -259,8 +291,7 @@ def delete_pokemon():
         return redirect('/')
 
     else:
-        Pokemons = Pokemon.query.order_by(Pokemon.name).all()
-        return render_template("index.html", Pokemons=Pokemons)
+        return render_index()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080,debug=True)
