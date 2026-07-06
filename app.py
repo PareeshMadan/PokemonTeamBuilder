@@ -2,12 +2,25 @@ from flask import Flask, render_template, url_for, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from enum import Enum
+import os
 import random
 import requests
 import uuid
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project.db'
+
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Neon/Postgres give us postgres:// or postgresql://; force the psycopg3 driver.
+    database_url = database_url.replace('postgres://', 'postgresql+psycopg://', 1)
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+else:
+    # No hosted DB configured (e.g. local dev). Vercel's filesystem is read-only
+    # except /tmp, so fall back there if this ever runs on Vercel without DATABASE_URL.
+    db_path = '/tmp/project.db' if os.environ.get('VERCEL') else 'project.db'
+    database_url = 'sqlite:///' + db_path
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.secret_key = 'pokemon-team-builder-secret-key'
 db = SQLAlchemy(app)
 
