@@ -11,4 +11,4 @@ live at https://pokemon-team-builder-eta.vercel.app/
 - click delete to delete that pokemon
 - click delete all to delete all pokemon
 
-![alt text](https://github.com/PareeshMadan/PokemonTeamBuilder/images/pokemonnew.png)
+![Pokemon Team Builder screenshot](https://raw.githubusercontent.com/PareeshMadan/PokemonTeamBuilder/main/images/pokemonnew.png)
